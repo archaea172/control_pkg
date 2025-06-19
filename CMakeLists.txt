@@ -10,23 +10,25 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(lifecycle_msgs REQUIRED)
-find_package(std_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
-add_executable(lifecycle_talker
-  src/lifecycle.cpp
+add_executable(joy_vel_converter
+  src/joy_vel_converter.cpp
 )
 
-ament_target_dependencies(lifecycle_talker
+ament_target_dependencies(joy_vel_converter
   rclcpp
   rclcpp_lifecycle
-  std_msgs
+  geometry_msgs
+  sensor_msgs
 )
 
 install(
-  TARGETS lifecycle_talker
+  TARGETS joy_vel_converter
   DESTINATION lib/${PROJECT_NAME}
 )
 
