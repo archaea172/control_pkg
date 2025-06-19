@@ -19,6 +19,13 @@ public:
   // 長い型名の省略
   using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
+  float max_vx = 2;
+  float max_vy = 2;
+  float max_omega = 2;
+
+  float max_button_vx = 0.2;
+  float max_button_vy = 0.2;
+
   // コンストラクタ
   JoyVelConverter()
   : rclcpp_lifecycle::LifecycleNode(std::string("joy_vel_converter"))
@@ -107,26 +114,27 @@ public:
     return CallbackReturn::SUCCESS;
   }
 
-  // タイマーのコールバック関数
+  // コールバック関数
   void joy_callback(const sensor_msgs::msg::Joy::SharedPtr rxdata) const
   {
     // lifecycle publisherがactivateのときのみ、データをpublishする
     if (vel_pub_->is_activated()) {
 
       geometry_msgs::msg::Twist txdata;
-      txdata.linear.x = rxdata->axes[0];
-      txdata.linear.y = 10;
-      txdata.linear.z = 10;
+      txdata.linear.x = -rxdata->axes[0] * max_vx - rxdata->axes[6]*max_button_vx;
+      txdata.linear.y =  rxdata->axes[1] * max_vy + rxdata->axes[7]*max_button_vy;
+      txdata.linear.z = 0;
 
       txdata.angular.x = 0;
       txdata.angular.y = 0;
-      txdata.angular.z = 3;
+      txdata.angular.z = (rxdata->axes[5] - rxdata->axes[2])*max_omega;
       RCLCPP_INFO(this->get_logger(), "publish");
       vel_pub_->publish(txdata);
     } else {
       RCLCPP_INFO(this->get_logger(), "controler is NOT activated.");
     }
   }
+
 
 private:
   // rclcpp::Publisherではなく、ライフサイクル用のpublisherを用いる
