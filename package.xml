@@ -12,6 +12,7 @@
   <build_depend>rclcpp_lifecycle</build_depend>
   <build_depend>lifecycle_msgs</build_depend>
   <build_depend>geometry_msgs</build_depend>
+  <build_depend>sensor_msgs</build_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

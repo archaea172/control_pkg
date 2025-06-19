@@ -6,6 +6,9 @@
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "rclcpp_lifecycle/lifecycle_publisher.hpp"
 #include "geometry_msgs/msg/twist.hpp"
+#include "sensor_msgs/msg/joy.hpp"
+
+using std::placeholders::_1;
 
 using namespace std::chrono_literals;
 
@@ -35,11 +38,10 @@ public:
       this->get_logger(), "on_configure() called. Previous state: %s",
       state.label().c_str());
 
-    // Publisherとタイマを定義する
+    // vel Publisher
     vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(
-      std::string(
-        "cmd_vel"), rclcpp::SystemDefaultsQoS());
-    timer_ = this->create_wall_timer(1s, std::bind(&JoyVelConverter::timer_callback, this));
+      std::string("cmd_vel"), rclcpp::SystemDefaultsQoS()
+    );
     return CallbackReturn::SUCCESS;
   }
 
@@ -52,6 +54,12 @@ public:
 
     // Publisherをactivateする
     vel_pub_->on_activate();
+    // joy subscriber
+    joy_subscriber_ = this->create_subscription<sensor_msgs::msg::Joy>(
+      std::string("joy"),
+      rclcpp::SystemDefaultsQoS(),
+      std::bind(&JoyVelConverter::joy_callback, this, _1)
+    );
     return CallbackReturn::SUCCESS;
   }
 
@@ -62,9 +70,10 @@ public:
       this->get_logger(), "on_deactivate() called. Previous state: %s",
       state.label().c_str());
 
-    // Publisherをdeactivateし、タイマを止める
+    // Publisherをdeactivate
     vel_pub_->on_deactivate();
-    timer_->cancel();
+    // subscriberをreset
+    joy_subscriber_.reset();
     return CallbackReturn::SUCCESS;
   }
 
@@ -77,7 +86,7 @@ public:
 
     // 次にconfigureするときのために、shared_ptrで所有しているリソースを解放する
     vel_pub_.reset();
-    timer_.reset();
+    joy_subscriber_.reset();
     return CallbackReturn::SUCCESS;
   }
 
@@ -98,24 +107,23 @@ public:
   }
 
   // タイマーのコールバック関数
-  void timer_callback()
+  void joy_callback(const sensor_msgs::msg::Joy::SharedPtr rxdata) const
   {
-    geometry_msgs::msg::Twist txdata;
-
-    txdata.linear.x = 10;
-    txdata.linear.y = 10;
-    txdata.linear.z = 10;
-
-    txdata.angular.x = 0;
-    txdata.angular.y = 0;
-    txdata.angular.z = 3;
-
     // lifecycle publisherがactivateのときのみ、データをpublishする
     if (vel_pub_->is_activated()) {
+
+      geometry_msgs::msg::Twist txdata;
+      txdata.linear.x = rxdata->axes[0];
+      txdata.linear.y = 10;
+      txdata.linear.z = 10;
+
+      txdata.angular.x = 0;
+      txdata.angular.y = 0;
+      txdata.angular.z = 3;
       RCLCPP_INFO(this->get_logger(), "publish");
       vel_pub_->publish(txdata);
     } else {
-      RCLCPP_INFO(this->get_logger(), "Lifecycle publisher is NOT activated.");
+      RCLCPP_INFO(this->get_logger(), "controler is NOT activated.");
     }
   }
 
@@ -123,8 +131,8 @@ private:
   // rclcpp::Publisherではなく、ライフサイクル用のpublisherを用いる
   rclcpp_lifecycle::LifecyclePublisher<geometry_msgs::msg::Twist>::SharedPtr vel_pub_;
 
-  // 周期的な処理を行うためのタイマ
-  rclcpp::TimerBase::SharedPtr timer_;
+  // joy subscriber
+  rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_subscriber_;
 };
 
 int main(int argc, char * argv[])
