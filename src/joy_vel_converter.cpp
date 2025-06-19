@@ -128,7 +128,6 @@ public:
       txdata.angular.x = 0;
       txdata.angular.y = 0;
       txdata.angular.z = (rxdata->axes[5] - rxdata->axes[2])*max_omega;
-      RCLCPP_INFO(this->get_logger(), "publish");
       vel_pub_->publish(txdata);
     } else {
       RCLCPP_INFO(this->get_logger(), "controler is NOT activated.");
